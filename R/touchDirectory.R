@@ -14,9 +14,13 @@
 #' For a given \code{path} and \code{version}, this function only modifies the files on its first call.
 #' All subsequent calls with the same two arguments, in the same R session and on the same day will have no effect.
 #' This avoids unnecessary touching of the file system during routine use.
+#'
+#' Writes to the output \code{*_dir.expiry} file are thread-safe.
+#' However, the caller should lock the target directory with \code{\link{lockDirectory}} before calling this function.
+#' This ensures that another process calling \code{\link{clearDirectories}} does not delete this directory while its access time is being updated.
 #' 
 #' @return 
-#' The \code{<version>_access} file within \code{path} is updated/created with the current date.
+#' The \code{<version>_dir.expiry} file within \code{path} is updated/created with the current date.
 #' If \code{clear=TRUE}, expired directories are removed by \code{\link{clearDirectories}}.
 #' A \code{NULL} is invisibly returned.
 #'
@@ -33,7 +37,7 @@
 #' # Setting the last access time.
 #' touchDirectory(base.path, version)
 #' list.files(base.path)
-#' readLines(file.path(path, "1.11.0_access"))
+#' readLines(file.path(path, "1.11.0_dir.expiry"))
 #' 
 #' @seealso
 #' \code{\link{clearDirectories}}, to remove expired directories at the same time.
@@ -45,11 +49,12 @@ touchDirectory <- function(path, version, clear=TRUE, date=Sys.Date(), ...) {
     dir <- file.path(path, as.character(version))
 
     if (.check_for_expiry(dir)) {
-        lckfile <- file.path(path, "dir.expiry-00LOCK") 
+        out <- paste0(dir, expiry.suffix)
+
+        lckfile <- paste0(out, lock.suffix)
         lckhandle <- lock(lckfile)
         on.exit(unlock(lckhandle))
 
-        out <- paste0(dir, "_dir.expiry-info")
         write.dcf(file=out, cbind(ExpiryVersion=as.character(packageVersion("dir.expiry")), AccessDate=as.integer(date)))
 
         if (clear) {
@@ -60,7 +65,8 @@ touchDirectory <- function(path, version, clear=TRUE, date=Sys.Date(), ...) {
     invisible(NULL)
 }
 
-suffix <- "_dir.expiry-info"
+expiry.suffix <- "_dir.expiry"
+lock.suffix <- "-00LOCK"
 
 expiry.env <- new.env()
 expiry.env$status <- list()
@@ -81,4 +87,9 @@ expiry.env$status <- list()
             TRUE
         }
     }
+}
+
+.flush_cache <- function() {
+    expiry.env$status <- list()
+    invisible(NULL)
 }

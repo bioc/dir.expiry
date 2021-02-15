@@ -20,7 +20,7 @@ Only provided for testing.}
 \item{...}{Further arguments to pass to \code{\link{clearDirectories}}.}
 }
 \value{
-The \code{<version>_access} file within \code{path} is updated/created with the current date.
+The \code{<version>_dir.expiry} file within \code{path} is updated/created with the current date.
 If \code{clear=TRUE}, expired directories are removed by \code{\link{clearDirectories}}.
 A \code{NULL} is invisibly returned.
 }
@@ -31,6 +31,10 @@ Touch a versioned directory to indicate that it has been recently accessed.
 For a given \code{path} and \code{version}, this function only modifies the files on its first call.
 All subsequent calls with the same two arguments, in the same R session and on the same day will have no effect.
 This avoids unnecessary touching of the file system during routine use.
+
+Writes to the output \code{*_dir.expiry} file are thread-safe.
+However, the caller should lock the target directory with \code{\link{lockDirectory}} before calling this function.
+This ensures that another process calling \code{\link{clearDirectories}} does not delete this directory while its access time is being updated.
 }
 \examples{
 # Creating the base directory.
@@ -44,7 +48,7 @@ dir.create(file.path(base.path, version))
 # Setting the last access time.
 touchDirectory(base.path, version)
 list.files(base.path)
-readLines(file.path(path, "1.11.0_access"))
+readLines(file.path(path, "1.11.0_dir.expiry"))
 
 }
 \seealso{

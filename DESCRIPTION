@@ -7,7 +7,8 @@ Description: Implements an expiration system for access to versioned directories
 Authors@R: person("Aaron", "Lun", role=c("aut", "cre"), email="infinite.monkeys.with.keyboards@gmail.com")
 License: GPL-3
 Imports:
-    utils
+    utils,
+    filelock
 Suggests:
     rmarkdown,
     knitr,

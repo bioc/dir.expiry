@@ -20,17 +20,18 @@ Expired directories are deleted and \code{NULL} is invisibly returned.
 Remove versioned directories that have passed on expiration limit.
 }
 \details{
-This function checks the last access date in the \code{*_access} files in \code{path}.
+This function checks the last access date in the \code{*_dir.expiry} files in \code{path}.
 If the last access date is too old, the corresponding subdirectory in \code{path} is treated as expired and is deleted.
 The age threshold depends on \code{limit}, which defaults to the value of the environment variable \code{BIOC_DIR_EXPIRY_LIMIT}.
 If this is not specified, it is set to 30 days.
 
-If \code{reference} is specified, versioned directories with version numbers greater than \code{reference} are not deleted,
+If \code{reference} is specified, directories with version numbers greater than (or equal to) \code{reference} are deleted,
 even if their last access date was older than the specified \code{limit}.
 This aims to favor the retention of newer versions, which is generally a sensible outcome when the aim is to stay up-to-date.
 
-Developers should not call this function directly but instead use \code{\link{touchDirectory}}.
-The latter handles locking and applies checks to avoid unnecessary contact with the file system.
+This function will acquire an exclusive lock on each directory before attempting to delete it.
+Applications can achieve thread safety by calling \code{\link{lockDirectory}} prior to any operations on the versioned directory.
+This ensures that \code{clearDirectories} will not delete a directory in use by another process, especially if the latter might update the last access time.
 }
 \examples{
 # Creating the base directory.
