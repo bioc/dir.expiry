@@ -64,12 +64,12 @@ Only directories with Bioconductor-style versions should be present in the base 
 
 ```{r}
 list.files(base.path)
-cat(readLines(file.path(base.path, "1.0.0_dir.expiry-info")), sep="\n")
+cat(readLines(file.path(base.path, "1.0.0_dir.expiry")), sep="\n")
 ```
 
-# Destroying old caches
+# Deleting old caches
 
-`touchDirectory()` will automatically destroy all expired caches that it finds in the base directory.
+`touchDirectory()` will automatically delete all expired caches that it finds in the base directory.
 By default, this is defined as all caches that were last accessed more than 30 days ago.
 To illustrate, let's create an older versioned cache:
 
@@ -92,6 +92,33 @@ list.files(base.path)
 ```
 
 Users can tune the expiration threshold by setting the number of days in the `limit=` argument or in the `BIOC_DIR_EXPIRY_LIMIT` environment variable.
+
+# Maintaining thread safety
+
+`touchDirectory()` makes extensive use of file locks (via the `r CRANpkg("filelock")` package) to avoid deleting caches that might be in use by other R processes.
+Developers are strongly advised to lock their directories of interest before calling `touchDirectory()`.
+For example:
+
+```{r}
+v <- package_version("1.0.0")
+lock <- lockDirectory(base.path, v)
+# on.exit(unlockDirectory(lock)), in a function context.
+
+# Do stuff with the versioned cache here...
+
+# Finally, touch the directory on successful completion.
+touchDirectory(base.path, v)
+```
+
+```{r, echo=FALSE, results="hide"}
+unlockDirectory(lock) 
+```
+
+The deletion procedure will attempt to acquire an exclusive lock prior to deletion.
+By locking it as shown above, we ensure that other R processes calling `touchDirectory()` will not inadvertently delete the cache directory while we are operating on it.
+
+For read-only applications, developers may wish to set `exclusive=FALSE` in `lockDirectory()`.
+This allows multiple processes to read from the cache at the same time, only being blocked when one process needs to perform a write operation.
 
 # Session information {-}
 
