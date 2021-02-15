@@ -37,7 +37,7 @@
 #' # Setting the last access time.
 #' touchDirectory(base.path, version)
 #' list.files(base.path)
-#' readLines(file.path(path, "1.11.0_dir.expiry"))
+#' readLines(file.path(base.path, "1.11.0_dir.expiry"))
 #' 
 #' @seealso
 #' \code{\link{clearDirectories}}, to remove expired directories at the same time.

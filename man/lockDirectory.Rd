@@ -2,9 +2,12 @@
 % Please edit documentation in R/lockDirectory.R
 \name{lockDirectory}
 \alias{lockDirectory}
+\alias{unlockDirectory}
 \title{Lock and unlock directories}
 \usage{
 lockDirectory(path, version, ...)
+
+unlockDirectory(handle)
 }
 \arguments{
 \item{path}{String containing the path to the base directory, i.e., the directory \emph{containing} all versioned subdirectories for a particular application.}

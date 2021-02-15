@@ -40,13 +40,13 @@ dir.create(base.path)
 
 # Creating an older versioned directory.
 version <- package_version("1.11.0")
-touchDirectory(path, version, date=Sys.Date() - 100, clear=FALSE)
-dir.create(file.path(path, version))
-list.files(path)
+touchDirectory(base.path, version, date=Sys.Date() - 100, clear=FALSE)
+dir.create(file.path(base.path, version))
+list.files(base.path)
 
 # Clearing them out.
-clearDirectories(path)
-list.files(path)
+clearDirectories(base.path)
+list.files(base.path)
 
 }
 \seealso{

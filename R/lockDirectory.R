@@ -34,6 +34,7 @@ lockDirectory <- function(path, version, ...) {
 
 #' @export
 #' @importFrom filelock unlock
+#' @rdname lockDirectory
 unlockDirectory <- function(handle) {
     unlock(handle)
 }
