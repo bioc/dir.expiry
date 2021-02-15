@@ -1,0 +1,84 @@
+#' Touch a versioned directory
+#'
+#' Touch a versioned directory to indicate that it has been recently accessed.
+#'
+#' @param path String containing the path to the base directory, i.e., the directory \emph{containing} all versioned subdirectories for a particular application.
+#' @param version A \link{package_version} specifying the version to touch.
+#' This should follow the Bioconductor versioning format.
+#' @param clear Logical scalar indicating whether to remove expired versions.
+#' @param date A \link{Date} object containing the current date.
+#' Only provided for testing.
+#' @param ... Further arguments to pass to \code{\link{clearDirectories}}.
+#'
+#' @details
+#' For a given \code{path} and \code{version}, this function only modifies the files on its first call.
+#' All subsequent calls with the same two arguments, in the same R session and on the same day will have no effect.
+#' This avoids unnecessary touching of the file system during routine use.
+#' 
+#' @return 
+#' The \code{<version>_access} file within \code{path} is updated/created with the current date.
+#' If \code{clear=TRUE}, expired directories are removed by \code{\link{clearDirectories}}.
+#' A \code{NULL} is invisibly returned.
+#'
+#' @author Aaron Lun
+#' @examples
+#' # Creating the base directory.
+#' base.path <- tempfile(pattern="expired_demo")
+#' dir.create(base.path)
+#'
+#' # Creating the versioned subdirectory.
+#' version <- package_version("1.11.0")
+#' dir.create(file.path(base.path, version))
+#'
+#' # Setting the last access time.
+#' touchDirectory(base.path, version)
+#' list.files(base.path)
+#' readLines(file.path(path, "1.11.0_access"))
+#' 
+#' @seealso
+#' \code{\link{clearDirectories}}, to remove expired directories at the same time.
+#'
+#' @export
+#' @importFrom utils packageVersion
+#' @importFrom filelock lock unlock
+touchDirectory <- function(path, version, clear=TRUE, date=Sys.Date(), ...) {
+    dir <- file.path(path, as.character(version))
+
+    if (.check_for_expiry(dir)) {
+        lckfile <- file.path(path, "dir.expiry-00LOCK") 
+        lckhandle <- lock(lckfile)
+        on.exit(unlock(lckhandle))
+
+        out <- paste0(dir, "_dir.expiry-info")
+        write.dcf(file=out, cbind(ExpiryVersion=as.character(packageVersion("dir.expiry")), AccessDate=as.integer(date)))
+
+        if (clear) {
+            clearDirectories(path, reference=version, ...)
+        }
+    }
+
+    invisible(NULL)
+}
+
+suffix <- "_dir.expiry-info"
+
+expiry.env <- new.env()
+expiry.env$status <- list()
+
+.check_for_expiry <- function(vpath) {
+    info <- expiry.env$status[[vpath]]
+
+    if (is.null(info)) {
+        info <- list(last.checked=Sys.Date())
+        expiry.env$status[[vpath]] <- info
+        TRUE
+    } else {
+        if (Sys.Date() == info$last.checked) {
+            FALSE
+        } else {
+            info$last.checked <- Sys.Date()
+            expiry.env$status[[vpath]] <- info
+            TRUE
+        }
+    }
+}
