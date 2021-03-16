@@ -11,16 +11,20 @@
 #' @param ... Further arguments to pass to \code{\link{clearDirectories}}.
 #'
 #' @details
+#' This function should be called \emph{after} any successful access to the contents of a versioned directory,
+#' to indicate that said directory is still in use by expiry-aware processes.
+#' A stub file is updated with the last access time to allow \code{\link{clearDirectories}} to accurately check for staleness.
+#'
 #' For a given \code{path} and \code{version}, this function only modifies the files on its first call.
 #' All subsequent calls with the same two arguments, in the same R session and on the same day will have no effect.
 #' This avoids unnecessary touching of the file system during routine use.
 #'
-#' Writes to the output \code{*_dir.expiry} file are thread-safe.
-#' However, the caller should lock the target directory with \code{\link{lockDirectory}} before calling this function.
+#' The caller should lock the target directory with \code{\link{lockDirectory}} before attempting access (and certainly before calling this function).
 #' This ensures that another process calling \code{\link{clearDirectories}} does not delete this directory while its access time is being updated.
+#' Under these conditions, any writes to the stub file itself are thread-safe.
 #' 
 #' @return 
-#' The \code{<version>_dir.expiry} file within \code{path} is updated/created with the current date.
+#' The \code{<version>_dir.expiry} stub file within \code{path} is updated/created with the current date.
 #' If \code{clear=TRUE}, expired directories are removed by \code{\link{clearDirectories}}.
 #' A \code{NULL} is invisibly returned.
 #'

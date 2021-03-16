@@ -1,7 +1,7 @@
 #' Lock and unlock directories
 #'
-#' Mark directories as locked or unlocked for thread-safe processing.
-#' This uses a standard naming scheme for consistency across various applications.
+#' Mark directories as locked or unlocked for thread-safe processing,
+#' using a standard naming scheme for the lock files.
 #'
 #' @inheritParams touchDirectory
 #' @param ... Further arguments to pass to \code{\link{lock}}.
