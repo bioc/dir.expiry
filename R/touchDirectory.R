@@ -1,6 +1,6 @@
 #' Touch a versioned directory
 #'
-#' Touch a versioned directory to indicate that it has been recently accessed.
+#' Touch a versioned directory to indicate that it has been successfully accessed in the recent past.
 #'
 #' @param path String containing the path to the base directory, i.e., the directory \emph{containing} all versioned subdirectories for a particular application.
 #' @param version A \link{package_version} specifying the version to touch.
@@ -66,8 +66,6 @@ touchDirectory <- function(path, version, clear=TRUE, date=Sys.Date(), ...) {
 }
 
 expiry.suffix <- "_dir.expiry"
-lock.suffix <- "-00LOCK"
-
 expiry.env <- new.env()
 expiry.env$status <- list()
 

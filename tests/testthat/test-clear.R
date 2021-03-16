@@ -13,13 +13,15 @@ test_that("clearDirectories works as expected", {
     touchDirectory(path, version, clear=FALSE)
     dir.create(file.path(path, version))
 
-    expect_true(all(c("1.11.0", "1.11.0_dir.expiry", "1.12.0", "1.12.0_dir.expiry") %in% list.files(path)))
+    earlier <- c("1.11.0", "1.11.0_dir.expiry")
+    later <- c("1.12.0", "1.12.0_dir.expiry")
+    expect_true(all(c(earlier, later) %in% list.files(path)))
 
     # Only deletes the expired directories.
     clearDirectories(path)
 
-    expect_false(any(c("1.11.0", "1.11.0_dir.expiry") %in% list.files(path)))
-    expect_true(all(c("1.12.0", "1.12.0_dir.expiry") %in% list.files(path)))
+    expect_false(any(c(earlier, "1.11.0-00LOCK") %in% list.files(path)))
+    expect_true(all(c(later, "1.12.0-00LOCK") %in% list.files(path))) 
 })
 
 test_that("clearDirectories responds to the environment variables", {
@@ -65,7 +67,9 @@ test_that("clearDirectories doesn't delete the reference or newer versions", {
     touchDirectory(path, version, date=Sys.Date() - 100, clear=FALSE)
     dir.create(file.path(path, version))
 
-    expected <- c("1.11.0", "1.11.0_dir.expiry", "1.12.0", "1.12.0_dir.expiry") 
+    earlier <- c("1.11.0", "1.11.0_dir.expiry")
+    later <- c("1.12.0", "1.12.0_dir.expiry")
+    expected <- c(earlier, later)
     expect_true(all(expected %in% list.files(path)))
 
     # Doesn't delete the expired directories.
@@ -74,6 +78,6 @@ test_that("clearDirectories doesn't delete the reference or newer versions", {
 
     # Keeps the reference.
     clearDirectories(path, reference=package_version("1.12.0"))
-    expect_false(any(c("1.11.0", "1.11.0_dir.expiry") %in% list.files(path)))
-    expect_true(all(c("1.12.0", "1.12.0_dir.expiry") %in% list.files(path)))
+    expect_false(any(c(earlier, "1.11.0-00LOCK") %in% list.files(path)))
+    expect_true(all(later %in% list.files(path))) # doesn't make the lock for the reference
 })

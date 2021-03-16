@@ -63,9 +63,25 @@ clearDirectories <- function(path, reference=NULL, limit=NULL) {
     invisible(NULL)
 }
 
+#' @importFrom filelock lock unlock
 .check_other_directory <- function(path, version, name, date, reference, limit) {
-    lck <- lockDirectory(path, version)
-    on.exit(unlockDirectory(lck))
+    # Unlike touchDirectory, this is exclusive as we will be deleting the lock
+    # files; no point allowing other processes to touch them in the meantime.
+    plock <- .plock_path(path)
+    p <- lock(plock) 
+    on.exit(unlock(p))
+
+    # Protect against simultaneous accesses to the targeted directory,
+    # assuming users called lockDirectory() before touchDirectory().
+    vlock <- .vlock_path(path, version)
+    V <- lock(vlock)
+    deleted <- FALSE
+    on.exit({ 
+        unlock(V)
+        if (deleted) {
+            unlink(vlock)
+        }
+    }, add=TRUE, after=FALSE)
 
     acc.path <- file.path(path, name)
     last.used <- as.integer(read.dcf(acc.path)[,"AccessDate"])
@@ -75,5 +91,6 @@ clearDirectories <- function(path, reference=NULL, limit=NULL) {
         unlink(acc.path, force=TRUE)
         unlink(paste0(acc.path, lock.suffix), force=TRUE)
         unlink(file.path(path, version), recursive=TRUE, force=TRUE)
+        deleted <- TRUE
     }
 }
