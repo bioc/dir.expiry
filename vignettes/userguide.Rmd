@@ -51,7 +51,8 @@ version <- package_version("1.0.0")
 dir.create(file.path(base.path, version))
 ```
 
-We can monitor the last access time by simply calling the `touchDirectory()` function with the desired version.
+Assume that we successfully accessed the versioned directory (for some arbitrary definition of success).
+We can then update the last access time by calling the `touchDirectory()` function with the base directory and version.
 
 ```{r}
 library(dir.expiry)
@@ -71,7 +72,7 @@ cat(readLines(file.path(base.path, "1.0.0_dir.expiry")), sep="\n")
 
 `touchDirectory()` will automatically delete all expired caches that it finds in the base directory.
 By default, this is defined as all caches that were last accessed more than 30 days ago.
-To illustrate, let's create an older versioned cache:
+To illustrate, let's create another versioned cache and pretend it was created 100 days ago:
 
 ```{r}
 old.version <- package_version("0.99.0")
@@ -80,7 +81,7 @@ touchDirectory(base.path, old.version, date=Sys.Date() - 100, clear=FALSE)
 list.files(base.path)
 ```
 
-Running `touchDirectory()` with the more recent version will delete the files associated with `old.version`.
+Running `touchDirectory()` on the more recent version will delete the files associated with `old.version`.
 However, the converse is not true; running `touchDirectory()` on the older version will never delete files associated with a newer version.
 This favors retention of caches corresponding to later versions, which is generally a reasonable outcome. 
 
@@ -91,13 +92,13 @@ touchDirectory(base.path, new.version)
 list.files(base.path)
 ```
 
-Users can tune the expiration threshold by setting the number of days in the `limit=` argument or in the `BIOC_DIR_EXPIRY_LIMIT` environment variable.
+Users can tune the expiration threshold by setting the number of days in the `limit=` argument or the `BIOC_DIR_EXPIRY_LIMIT` environment variable.
 
 # Maintaining thread safety
 
 `touchDirectory()` makes extensive use of file locks (via the `r CRANpkg("filelock")` package) to avoid deleting caches that might be in use by other R processes.
 Developers are strongly advised to lock their directories of interest before calling `touchDirectory()`.
-For example:
+This is done most safely by using the `lockDirectory()` function:
 
 ```{r}
 v <- package_version("1.0.0")
@@ -114,11 +115,11 @@ touchDirectory(base.path, v)
 unlockDirectory(lock) 
 ```
 
-The deletion procedure will attempt to acquire an exclusive lock prior to deletion.
+When deleting old versions, `touchDirectory()` will attempt to acquire an exclusive lock on the corresponding directories.
 By locking it as shown above, we ensure that other R processes calling `touchDirectory()` will not inadvertently delete the cache directory while we are operating on it.
 
 For read-only applications, developers may wish to set `exclusive=FALSE` in `lockDirectory()`.
-This allows multiple processes to read from the cache at the same time, only being blocked when one process needs to perform a write operation.
+This allows multiple processes to read from the versioned cache at the same time, only being blocked when one process needs to perform a write operation.
 
 # Session information {-}
 
