@@ -22,6 +22,7 @@ test_that("clearDirectories works as expected", {
 
     expect_false(any(c(earlier, "1.11.0-00LOCK") %in% list.files(path)))
     expect_true(all(c(later, "1.12.0-00LOCK") %in% list.files(path))) 
+    expect_true("central-00LOCK" %in% list.files(path))
 })
 
 test_that("clearDirectories responds to the environment variables", {
