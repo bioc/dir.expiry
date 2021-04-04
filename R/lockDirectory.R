@@ -40,7 +40,7 @@
 #' @importFrom filelock lock
 lockDirectory <- function(path, ...) {
     dir <- dirname(path)
-    dir.create(dir, showWarnings=FALSE)
+    dir.create(dir, showWarnings=FALSE, recursive=TRUE)
     plock <- .plock_path(dir)
 
     second <- lock(plock, exclusive=FALSE) # define this first to protect the other lock.
