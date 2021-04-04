@@ -3,15 +3,19 @@
 
 test_that("clearDirectories works as expected", {
     path <- tempfile(pattern="expired_demo")
-                                                                      
     dir.create(path)
-    version <- package_version("1.11.0")
-    touchDirectory(path, version, date=Sys.Date() - 100, clear=FALSE)
-    dir.create(file.path(path, version))
 
+    # Making an old directory.
+    version <- package_version("1.11.0")
+    ver.dir <- file.path(path, version)
+    dir.create(ver.dir)
+    touchDirectory(ver.dir, date=Sys.Date() - 100, clear=FALSE)
+
+    # Making a more recent one without any clearing.
     version <- package_version("1.12.0")
-    touchDirectory(path, version, clear=FALSE)
-    dir.create(file.path(path, version))
+    ver.dir <- file.path(path, version)
+    dir.create(ver.dir)
+    touchDirectory(ver.dir, clear=FALSE)
 
     earlier <- c("1.11.0", "1.11.0_dir.expiry")
     later <- c("1.12.0", "1.12.0_dir.expiry")
@@ -30,8 +34,9 @@ test_that("clearDirectories responds to the environment variables", {
                                                                       
     dir.create(path)
     version <- package_version("1.11.0")
-    touchDirectory(path, version, date=Sys.Date() - 100, clear=FALSE)
-    dir.create(file.path(path, version))
+    ver.dir <- file.path(path, version)
+    dir.create(ver.dir)
+    touchDirectory(ver.dir, date=Sys.Date() - 100, clear=FALSE)
 
     expected <- c("1.11.0", "1.11.0_dir.expiry") 
     expect_true(all(expected %in% list.files(path)))
@@ -61,12 +66,14 @@ test_that("clearDirectories doesn't delete the reference or newer versions", {
                                                                       
     dir.create(path)
     version <- package_version("1.11.0")
-    touchDirectory(path, version, date=Sys.Date() - 100, clear=FALSE)
-    dir.create(file.path(path, version))
+    ver.dir <- file.path(path, version)
+    dir.create(ver.dir)
+    touchDirectory(ver.dir, date=Sys.Date() - 100, clear=FALSE)
 
     version <- package_version("1.12.0")
-    touchDirectory(path, version, date=Sys.Date() - 100, clear=FALSE)
-    dir.create(file.path(path, version))
+    ver.dir <- file.path(path, version)
+    dir.create(ver.dir)
+    touchDirectory(ver.dir, date=Sys.Date() - 100, clear=FALSE)
 
     earlier <- c("1.11.0", "1.11.0_dir.expiry")
     later <- c("1.12.0", "1.12.0_dir.expiry")

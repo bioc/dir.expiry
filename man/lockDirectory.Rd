@@ -5,15 +5,13 @@
 \alias{unlockDirectory}
 \title{Lock and unlock directories}
 \usage{
-lockDirectory(path, version, ...)
+lockDirectory(path, ...)
 
 unlockDirectory(handle)
 }
 \arguments{
-\item{path}{String containing the path to the base directory, i.e., the directory \emph{containing} all versioned subdirectories for a particular application.}
-
-\item{version}{A \link{package_version} specifying the version to touch.
-This should follow the Bioconductor versioning format.}
+\item{path}{String containing the path to a versioned directory.
+The \code{dirname} should be the package cache while the \code{basename} should be a version number.}
 
 \item{...}{Further arguments to pass to \code{\link{lock}}.}
 
@@ -30,22 +28,24 @@ using a standard naming scheme for the lock files.
 }
 \details{
 \code{lockDirectory} actually creates two locks.
-The first represents a lock on the \code{version} subdirectory within \code{path} and provides thread-safe read/write on its contents.
+The first represents a lock on the versioned directory (i.e., \code{basename(path)}) within the package cache (i.e., \code{dirname(path)}) and provides thread-safe read/write on its contents.
 Concurrent read operations are also permitted by setting \code{exclusive=FALSE} in \code{...} to define a shared lock..
 
-The second lock is applied to \code{path} and is always a shared lock, regardless of the contents of \code{...}.
+The second lock is applied to the package cache and is always a shared lock, regardless of the contents of \code{...}.
 This provides thread-safe access to the lock file used in the first lock,
 protecting it from deletion when the relevant directory expires in \code{\link{clearDirectories}}.
 }
 \examples{
 # Creating the relevant directories.
-base.path <- tempfile(pattern="expired_demo")
-dir.create(base.path)
+cache.dir <- tempfile(pattern="expired_demo")
+dir.create(cache.dir)
 version <- package_version("1.11.0")
 
-handle <- lockDirectory(base.path, version)
+handle <- lockDirectory(file.path(cache.dir, version))
 handle
 unlockDirectory(handle)
+
+list.files(cache.dir)
 
 }
 \author{

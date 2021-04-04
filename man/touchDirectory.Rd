@@ -4,13 +4,11 @@
 \alias{touchDirectory}
 \title{Touch a versioned directory}
 \usage{
-touchDirectory(path, version, clear = TRUE, date = Sys.Date(), ...)
+touchDirectory(path, clear = TRUE, date = Sys.Date(), ...)
 }
 \arguments{
-\item{path}{String containing the path to the base directory, i.e., the directory \emph{containing} all versioned subdirectories for a particular application.}
-
-\item{version}{A \link{package_version} specifying the version to touch.
-This should follow the Bioconductor versioning format.}
+\item{path}{String containing the path to a versioned directory.
+The \code{dirname} should be the package cache while the \code{basename} should be a version number.}
 
 \item{clear}{Logical scalar indicating whether to remove expired versions.}
 
@@ -36,23 +34,23 @@ For a given \code{path} and \code{version}, this function only modifies the file
 All subsequent calls with the same two arguments, in the same R session and on the same day will have no effect.
 This avoids unnecessary touching of the file system during routine use.
 
-The caller should lock the target directory with \code{\link{lockDirectory}} before attempting access (and certainly before calling this function).
+The caller should lock the target directory with \code{\link{lockDirectory}} before calling this function.
 This ensures that another process calling \code{\link{clearDirectories}} does not delete this directory while its access time is being updated.
-Under these conditions, any writes to the stub file itself are thread-safe.
+If the target directory is locked, any writes to the stub file itself are thread-safe, even for shared locks.
 }
 \examples{
-# Creating the base directory.
-base.path <- tempfile(pattern="expired_demo")
-dir.create(base.path)
+# Creating the package cache.
+cache.dir <- tempfile(pattern="expired_demo")
+dir.create(cache.dir)
 
 # Creating the versioned subdirectory.
 version <- package_version("1.11.0")
-dir.create(file.path(base.path, version))
+dir.create(file.path(cache.dir, version))
 
 # Setting the last access time.
-touchDirectory(base.path, version)
-list.files(base.path)
-readLines(file.path(base.path, "1.11.0_dir.expiry"))
+touchDirectory(file.path(cache.dir, version))
+list.files(cache.dir)
+readLines(file.path(cache.dir, "1.11.0_dir.expiry"))
 
 }
 \seealso{

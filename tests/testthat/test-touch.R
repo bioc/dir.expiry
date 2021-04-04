@@ -6,7 +6,7 @@ test_that("touchDirectories works as expected", {
     dir.create(path)
     version <- package_version("1.11.0")
 
-    touchDirectory(path, version)
+    touchDirectory(file.path(path, version))
     expect_true(file.exists(file.path(path, "1.11.0_dir.expiry")))
 
     contents <- read.dcf(file.path(path, "1.11.0_dir.expiry"))
@@ -18,19 +18,25 @@ test_that("touchDirectories calls the directory clearer", {
 
     dir.create(path)
     version <- package_version("1.11.0")
-    touchDirectory(path, version, date=Sys.Date() - 100, clear=FALSE)
-    dir.create(file.path(path, version))
-    expect_true("1.11.0" %in% list.files(path))
-    expect_true("1.11.0_dir.expiry" %in% list.files(path))
+    ver.dir <- file.path(path, version)
+    dir.create(ver.dir)
+    touchDirectory(ver.dir, date=Sys.Date() - 100, clear=FALSE)
 
+    all.files <- list.files(path)
+    expect_true("1.11.0" %in% all.files)
+    expect_true("1.11.0_dir.expiry" %in% all.files)
+
+    # Another versioned directory.
     version <- package_version("1.12.0")
-    touchDirectory(path, version)
-    dir.create(file.path(path, version))
+    ver.dir <- file.path(path, version)
+    dir.create(ver.dir)
+    touchDirectory(ver.dir)
 
-    expect_true("1.12.0" %in% list.files(path))
-    expect_true("1.12.0_dir.expiry" %in% list.files(path))
-    expect_false("1.11.0" %in% list.files(path))
-    expect_false("1.11.0_dir.expiry" %in% list.files(path))
+    all.files <- list.files(path)
+    expect_true("1.12.0" %in% all.files)
+    expect_true("1.12.0_dir.expiry" %in% all.files)
+    expect_false("1.11.0" %in% all.files)
+    expect_false("1.11.0_dir.expiry" %in% all.files)
 })
 
 test_that("touchDirectories skips work", {
@@ -38,13 +44,14 @@ test_that("touchDirectories skips work", {
 
     dir.create(path)
     version <- package_version("1.11.0")
+    ver.dir <- file.path(path, version)
 
-    touchDirectory(path, version)
+    touchDirectory(ver.dir)
     target <- file.path(path, "1.11.0_dir.expiry")
     expect_true(file.exists(target))
 
     # Doesn't bother to regenerate the file, because we skip this process entirely.
     unlink(target)
-    touchDirectory(path, version)
+    touchDirectory(ver.dir)
     expect_false(file.exists(target))
 })

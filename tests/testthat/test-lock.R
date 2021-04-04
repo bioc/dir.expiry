@@ -6,7 +6,7 @@ test_that("lockDirectory generates the requisite files", {
     dir.create(base.path)
     version <- package_version("1.11.0")
 
-    handle <- lockDirectory(base.path, version)
+    handle <- lockDirectory(file.path(base.path, version))
     expect_identical(length(handle), 2L)
 
     expect_true(file.exists(file.path(base.path, paste0(version, "-00LOCK"))))

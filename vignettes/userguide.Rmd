@@ -22,17 +22,17 @@ library(BiocStyle)
 # Background
 
 Several Bioconductor packages (e.g., `r Biocpkg("basilisk")`, `r Biocpkg("rebook")`) use external cache directories to manage its resources.
-This typically involves creating a base directory in which versioned caches are created:
+This typically involves creating a package cache directory in which versioned directories are created:
 
 ```
 ~/.cache/
-  basilisk/  # base directory
-    0.99.0/  # versioned subdirectories.
+  basilisk/  # package cache directory
+    0.99.0/  # versioned directory
     1.0.1/
     1.1.3/
 ```
 
-The use of separate versioned caches allows the simultaneous use of multiple R installations with different package versions.
+The use of separate versioned caches allows the simultaneous use of multiple R installations with different versions of the same package.
 However, it requires some housekeeping to remove stale caches and avoid an large increase in disk usage - especially for packages with frequent version updates.
 
 One might think of using POSIX access time but this is not a reliable indicator of whether a cache is truly being used by the package.
@@ -41,44 +41,53 @@ For example, external processes like virus scans, `find -exec grep` and so on ca
 # Setting the access time
 
 `r Biocpkg("dir.expiry")` implements its own tracker to monitor the last access time for a particular cache version.
-To illustrate, let's set up a versioned cache:
+To illustrate, let's set up a versioned cache directory.
 
 ```{r}
-base.path <- tempfile(pattern="expired_demo")
-dir.create(base.path)
-                                              
+cache.path <- tempfile(pattern="expired_demo")
+dir.create(cache.path)
+
 version <- package_version("1.0.0")
-dir.create(file.path(base.path, version))
+version.dir <- file.path(cache.path, version)
+dir.create(version.dir)
+```
+
+The path to this versioned directory should contain the version number as the `basename` and the package cache directory as the `dirname`.
+The expectation is that there may be multiple versioned directories nested within a single package's cache directory.
+
+```{r}
+version.dir
 ```
 
 Assume that we successfully accessed the versioned directory (for some arbitrary definition of success).
-We can then update the last access time by calling the `touchDirectory()` function with the base directory and version.
+We can then update the last access time by calling the `touchDirectory()` function with the path to the versioned directory:
 
 ```{r}
 library(dir.expiry)
-touchDirectory(base.path, version)
+touchDirectory(version.dir)
 ```
 
 Doing so creates or updates an `*_dir.expiry-info` file containing the last access date as an integer.
 (This implies that the process creating the cache should not make any of its own files ending with `*_dir.expiry-info`, lest they be confused with `r Biocpkg("dir.expiry")`'s files.)
-Only directories with Bioconductor-style versions should be present in the base directory.
+Only directories with Bioconductor-style versions should be present in the package cache directory.
 
 ```{r}
-list.files(base.path)
-cat(readLines(file.path(base.path, "1.0.0_dir.expiry")), sep="\n")
+list.files(cache.path)
+cat(readLines(file.path(cache.path, "1.0.0_dir.expiry")), sep="\n")
 ```
 
 # Deleting old caches
 
-`touchDirectory()` will automatically delete all expired caches that it finds in the base directory.
+`touchDirectory()` will automatically delete all expired caches that it finds in the package cache directory.
 By default, this is defined as all caches that were last accessed more than 30 days ago.
 To illustrate, let's create another versioned cache and pretend it was created 100 days ago:
 
 ```{r}
 old.version <- package_version("0.99.0")
-dir.create(file.path(base.path, old.version))
-touchDirectory(base.path, old.version, date=Sys.Date() - 100, clear=FALSE)
-list.files(base.path)
+old.version.dir <- file.path(cache.path, old.version)
+dir.create(old.version.dir)
+touchDirectory(old.version.dir, date=Sys.Date() - 100, clear=FALSE)
+list.files(cache.path)
 ```
 
 Running `touchDirectory()` on the more recent version will delete the files associated with `old.version`.
@@ -87,9 +96,10 @@ This favors retention of caches corresponding to later versions, which is genera
 
 ```{r}
 new.version <- package_version("1.0.1")
-dir.create(file.path(base.path, new.version))
-touchDirectory(base.path, new.version)
-list.files(base.path)
+new.version.dir <- file.path(cache.path, new.version)
+dir.create(new.version.dir)
+touchDirectory(new.version.dir)
+list.files(cache.path)
 ```
 
 Users can tune the expiration threshold by setting the number of days in the `limit=` argument or the `BIOC_DIR_EXPIRY_LIMIT` environment variable.
@@ -102,13 +112,14 @@ This is done most safely by using the `lockDirectory()` function:
 
 ```{r}
 v <- package_version("1.0.0")
-lock <- lockDirectory(base.path, v)
+v.dir <- file.path(cache.path, v)
+lock <- lockDirectory(v.dir)
 # on.exit(unlockDirectory(lock)), in a function context.
 
-# Do stuff with the versioned cache here...
+# Do stuff with the versioned cache 'v.dir' here...
 
 # Finally, touch the directory on successful completion.
-touchDirectory(base.path, v)
+touchDirectory(v.dir)
 ```
 
 ```{r, echo=FALSE, results="hide"}

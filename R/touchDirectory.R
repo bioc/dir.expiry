@@ -2,9 +2,8 @@
 #'
 #' Touch a versioned directory to indicate that it has been successfully accessed in the recent past.
 #'
-#' @param path String containing the path to the base directory, i.e., the directory \emph{containing} all versioned subdirectories for a particular application.
-#' @param version A \link{package_version} specifying the version to touch.
-#' This should follow the Bioconductor versioning format.
+#' @param path String containing the path to a versioned directory.
+#' The \code{dirname} should be the package cache while the \code{basename} should be a version number.
 #' @param clear Logical scalar indicating whether to remove expired versions.
 #' @param date A \link{Date} object containing the current date.
 #' Only provided for testing.
@@ -19,9 +18,9 @@
 #' All subsequent calls with the same two arguments, in the same R session and on the same day will have no effect.
 #' This avoids unnecessary touching of the file system during routine use.
 #'
-#' The caller should lock the target directory with \code{\link{lockDirectory}} before attempting access (and certainly before calling this function).
+#' The caller should lock the target directory with \code{\link{lockDirectory}} before calling this function.
 #' This ensures that another process calling \code{\link{clearDirectories}} does not delete this directory while its access time is being updated.
-#' Under these conditions, any writes to the stub file itself are thread-safe.
+#' If the target directory is locked, any writes to the stub file itself are thread-safe, even for shared locks.
 #' 
 #' @return 
 #' The \code{<version>_dir.expiry} stub file within \code{path} is updated/created with the current date.
@@ -30,18 +29,18 @@
 #'
 #' @author Aaron Lun
 #' @examples
-#' # Creating the base directory.
-#' base.path <- tempfile(pattern="expired_demo")
-#' dir.create(base.path)
+#' # Creating the package cache.
+#' cache.dir <- tempfile(pattern="expired_demo")
+#' dir.create(cache.dir)
 #'
 #' # Creating the versioned subdirectory.
 #' version <- package_version("1.11.0")
-#' dir.create(file.path(base.path, version))
+#' dir.create(file.path(cache.dir, version))
 #'
 #' # Setting the last access time.
-#' touchDirectory(base.path, version)
-#' list.files(base.path)
-#' readLines(file.path(base.path, "1.11.0_dir.expiry"))
+#' touchDirectory(file.path(cache.dir, version))
+#' list.files(cache.dir)
+#' readLines(file.path(cache.dir, "1.11.0_dir.expiry"))
 #' 
 #' @seealso
 #' \code{\link{clearDirectories}}, to remove expired directories at the same time.
@@ -49,11 +48,9 @@
 #' @export
 #' @importFrom utils packageVersion
 #' @importFrom filelock lock unlock
-touchDirectory <- function(path, version, clear=TRUE, date=Sys.Date(), ...) {
-    dir <- file.path(path, as.character(version))
-
-    if (.check_for_expiry(dir)) {
-        out <- paste0(dir, expiry.suffix)
+touchDirectory <- function(path, clear=TRUE, date=Sys.Date(), ...) {
+    if (.check_for_expiry(path)) {
+        out <- paste0(.unslash(path), expiry.suffix)
 
         lckfile <- paste0(out, lock.suffix)
         lckhandle <- lock(lckfile)
@@ -62,7 +59,7 @@ touchDirectory <- function(path, version, clear=TRUE, date=Sys.Date(), ...) {
         write.dcf(file=out, cbind(ExpiryVersion=as.character(packageVersion("dir.expiry")), AccessDate=as.integer(date)))
 
         if (clear) {
-            clearDirectories(path, reference=version, ...)
+            clearDirectories(dirname(path), reference=basename(path), ...)
         }
     }
 

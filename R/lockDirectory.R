@@ -14,10 +14,10 @@
 #'
 #' @details
 #' \code{lockDirectory} actually creates two locks.
-#' The first represents a lock on the \code{version} subdirectory within \code{path} and provides thread-safe read/write on its contents.
+#' The first represents a lock on the versioned directory (i.e., \code{basename(path)}) within the package cache (i.e., \code{dirname(path)}) and provides thread-safe read/write on its contents.
 #' Concurrent read operations are also permitted by setting \code{exclusive=FALSE} in \code{...} to define a shared lock..
 #' 
-#' The second lock is applied to \code{path} and is always a shared lock, regardless of the contents of \code{...}.
+#' The second lock is applied to the package cache and is always a shared lock, regardless of the contents of \code{...}.
 #' This provides thread-safe access to the lock file used in the first lock,
 #' protecting it from deletion when the relevant directory expires in \code{\link{clearDirectories}}.
 #'
@@ -25,31 +25,37 @@
 #' 
 #' @examples
 #' # Creating the relevant directories.
-#' base.path <- tempfile(pattern="expired_demo")
-#' dir.create(base.path)
+#' cache.dir <- tempfile(pattern="expired_demo")
+#' dir.create(cache.dir)
 #' version <- package_version("1.11.0")
 #' 
-#' handle <- lockDirectory(base.path, version)
+#' handle <- lockDirectory(file.path(cache.dir, version))
 #' handle
 #' unlockDirectory(handle)
+#'
+#' list.files(cache.dir)
 #' 
 #' @export
 #' @importFrom filelock lock
-lockDirectory <- function(path, version, ...) {
-    plock <- .plock_path(path)
+lockDirectory <- function(path, ...) {
+    plock <- .plock_path(dirname(path))
     second <- lock(plock, exclusive=FALSE) # define this first to protect the other lock.
-    vlock <- .vlock_path(path, version)
+    vlock <- .vlock_path(path)
     list(lock(vlock, ...), second)
 }
 
 lock.suffix <- "-00LOCK"
 
-.vlock_path <- function(path, version) {
-    file.path(path, paste0(as.character(version), lock.suffix)) 
+.unslash <- function(path) {
+    sub("/$", "", path)
 }
 
-.plock_path <- function(path) { 
-    file.path(path, paste0("central", lock.suffix))
+.vlock_path <- function(path) {
+    paste0(.unslash(path), lock.suffix)
+}
+
+.plock_path <- function(dir) { 
+    file.path(dir, paste0("central", lock.suffix))
 }
 
 #' @export
