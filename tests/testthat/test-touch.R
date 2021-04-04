@@ -28,4 +28,8 @@ test_that("touchDirectories skips work", {
     unlink(target)
     touchDirectory(ver.dir)
     expect_false(file.exists(target))
+
+    # Unless we force the issue.
+    touchDirectory(ver.dir, force=TRUE)
+    expect_true(file.exists(target))
 })

@@ -4,7 +4,7 @@
 \alias{clearDirectories}
 \title{Clear expired directories}
 \usage{
-clearDirectories(dir, reference = NULL, limit = NULL)
+clearDirectories(dir, reference = NULL, limit = NULL, force = FALSE)
 }
 \arguments{
 \item{dir}{String containing the path to a package cache containing any number of versioned directories.}
@@ -12,6 +12,8 @@ clearDirectories(dir, reference = NULL, limit = NULL)
 \item{reference}{A \link{package_version} specifying a reference version to be protected from deletion.}
 
 \item{limit}{Integer scalar specifying the maximum number of days to have passed before a versioned directory expires.}
+
+\item{force}{Logical scalar indicating whether to forcibly re-examine \code{dir} for expired versioned directories.}
 }
 \value{
 Expired directories are deleted and \code{NULL} is invisibly returned.
@@ -33,6 +35,11 @@ This aims to favor the retention of newer versions, which is generally a sensibl
 This function will acquire exclusive locks on the package cache directory and on each versioned directory before attempting to delete the latter.
 Applications can achieve thread safety by calling \code{\link{lockDirectory}} prior to any operations on the versioned directory.
 This ensures that \code{clearDirectories} will not delete a directory in use by another process, especially if the latter might update the last access time.
+
+By default, this function will remember the values of \code{dir} that were passed in previous calls,
+and will avoid re-examining those same \code{dir}s for expired directories on the same day.
+This avoids unnecessary file system queries and locks when this function is repeatedly called.
+Advanced users can force a re-examination by setting \code{force=TRUE}.
 }
 \examples{
 # Creating the package cache.

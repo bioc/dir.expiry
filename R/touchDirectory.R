@@ -6,6 +6,7 @@
 #' The \code{dirname} should be the package cache while the \code{basename} should be a version number.
 #' @param date A \link{Date} object containing the current date.
 #' Only provided for testing.
+#' @param force Logical scalar indicating whether to forcibly update the access date for \code{path}.
 #'
 #' @details
 #' This function should be called \emph{after} any successful access to the contents of a versioned directory,
@@ -19,7 +20,12 @@
 #' The caller should lock the target directory with \code{\link{lockDirectory}} before calling this function.
 #' This ensures that another process calling \code{\link{clearDirectories}} does not delete this directory while its access time is being updated.
 #' If the target directory is locked, any writes to the stub file itself are thread-safe, even for shared locks.
-#' 
+#'
+#' By default, this function will remember the values of \code{path} that were passed in previous calls,
+#' and will avoid re-updating those same \code{path}s with the same date when called on the same day.
+#' This avoids unnecessary file system writes and locks when this function is repeatedly called.
+#' Advanced users can force an update by setting \code{force=TRUE}.
+#'
 #' @return 
 #' The \code{<version>_dir.expiry} stub file within \code{path} is updated/created with the current date.
 #' A \code{NULL} is invisibly returned.
@@ -50,8 +56,8 @@
 #' @export
 #' @importFrom utils packageVersion
 #' @importFrom filelock lock unlock
-touchDirectory <- function(path, date=Sys.Date()) {
-    if (.was_checked_today(path, touched.env)) {
+touchDirectory <- function(path, date=Sys.Date(), force=FALSE) {
+    if (.was_checked_today(path, touched.env) && !force) {
         return(invisible(NULL))
     }
 

@@ -4,7 +4,7 @@
 \alias{touchDirectory}
 \title{Touch a versioned directory}
 \usage{
-touchDirectory(path, date = Sys.Date())
+touchDirectory(path, date = Sys.Date(), force = FALSE)
 }
 \arguments{
 \item{path}{String containing the path to a versioned directory.
@@ -12,6 +12,8 @@ The \code{dirname} should be the package cache while the \code{basename} should 
 
 \item{date}{A \link{Date} object containing the current date.
 Only provided for testing.}
+
+\item{force}{Logical scalar indicating whether to forcibly update the access date for \code{path}.}
 }
 \value{
 The \code{<version>_dir.expiry} stub file within \code{path} is updated/created with the current date.
@@ -32,6 +34,11 @@ This avoids unnecessary touching of the file system during routine use.
 The caller should lock the target directory with \code{\link{lockDirectory}} before calling this function.
 This ensures that another process calling \code{\link{clearDirectories}} does not delete this directory while its access time is being updated.
 If the target directory is locked, any writes to the stub file itself are thread-safe, even for shared locks.
+
+By default, this function will remember the values of \code{path} that were passed in previous calls,
+and will avoid re-updating those same \code{path}s with the same date when called on the same day.
+This avoids unnecessary file system writes and locks when this function is repeatedly called.
+Advanced users can force an update by setting \code{force=TRUE}.
 }
 \examples{
 # Creating the package cache.

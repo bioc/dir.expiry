@@ -5,6 +5,7 @@
 #' @param dir String containing the path to a package cache containing any number of versioned directories.
 #' @param reference A \link{package_version} specifying a reference version to be protected from deletion.
 #' @param limit Integer scalar specifying the maximum number of days to have passed before a versioned directory expires.
+#' @param force Logical scalar indicating whether to forcibly re-examine \code{dir} for expired versioned directories.
 #' 
 #' @return Expired directories are deleted and \code{NULL} is invisibly returned.
 #'
@@ -25,6 +26,11 @@
 #' Applications can achieve thread safety by calling \code{\link{lockDirectory}} prior to any operations on the versioned directory.
 #' This ensures that \code{clearDirectories} will not delete a directory in use by another process, especially if the latter might update the last access time.
 #'
+#' By default, this function will remember the values of \code{dir} that were passed in previous calls,
+#' and will avoid re-examining those same \code{dir}s for expired directories on the same day.
+#' This avoids unnecessary file system queries and locks when this function is repeatedly called.
+#' Advanced users can force a re-examination by setting \code{force=TRUE}.
+#' 
 #' @examples
 #' # Creating the package cache.
 #' cache.dir <- tempfile(pattern="expired_demo")
@@ -47,8 +53,8 @@
 #' @seealso
 #' \code{\link{touchDirectory}}, which calls this function automatically when \code{clear=TRUE}.
 #' @export
-clearDirectories <- function(dir, reference=NULL, limit=NULL) {
-    if (.was_checked_today(dir, cleared.env)) {
+clearDirectories <- function(dir, reference=NULL, limit=NULL, force=FALSE) {
+    if (.was_checked_today(dir, cleared.env) && !force) {
         return(invisible(NULL))
     }
 

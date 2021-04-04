@@ -56,10 +56,8 @@ test_that("clearDirectories responds to the environment variables", {
         Sys.setenv(BIOC_DIR_EXPIRY_LIMIT=NA)
     }
 
-    # Positive control. Requires a flush to avoid skipping the deletion altogether,
-    # given that the same 'path' has already been checked.
-    dir.expiry:::.flush_cache(dir.expiry:::cleared.env)
-    clearDirectories(path)
+    # Positive control. 
+    clearDirectories(path, force=TRUE)
     expect_false(any(expected %in% list.files(path)))
 })
 
@@ -86,9 +84,8 @@ test_that("clearDirectories doesn't delete the reference or newer versions", {
     clearDirectories(path, reference=package_version("1.11.0"))
     expect_true(all(expected %in% list.files(path)))
 
-    # Keeps the reference. Again, requires a flush to avoid skipping deletion.
-    dir.expiry:::.flush_cache(dir.expiry:::cleared.env)
-    clearDirectories(path, reference=package_version("1.12.0"))
+    # Keeps the reference. 
+    clearDirectories(path, reference=package_version("1.12.0"), force=TRUE)
     expect_false(any(c(earlier, "1.11.0-00LOCK") %in% list.files(path)))
     expect_true(all(later %in% list.files(path))) # doesn't make the lock for the reference
 })
