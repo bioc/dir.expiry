@@ -21,12 +21,13 @@
 #' This provides thread-safe access to the lock file used in the first lock,
 #' protecting it from deletion when the relevant directory expires in \code{\link{clearDirectories}}.
 #'
+#' If \code{dirname(path)} does not exist, it will be created by \code{lockDirectory}.
+#'
 #' @author Aaron Lun
 #' 
 #' @examples
 #' # Creating the relevant directories.
 #' cache.dir <- tempfile(pattern="expired_demo")
-#' dir.create(cache.dir)
 #' version <- package_version("1.11.0")
 #' 
 #' handle <- lockDirectory(file.path(cache.dir, version))
@@ -38,7 +39,10 @@
 #' @export
 #' @importFrom filelock lock
 lockDirectory <- function(path, ...) {
-    plock <- .plock_path(dirname(path))
+    dir <- dirname(path)
+    dir.create(dir, showWarnings=FALSE)
+    plock <- .plock_path(dir)
+
     second <- lock(plock, exclusive=FALSE) # define this first to protect the other lock.
     vlock <- .vlock_path(path)
     list(lock(vlock, ...), second)
