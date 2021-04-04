@@ -7,7 +7,7 @@ test_that("lockDirectory generates the requisite files", {
     version <- package_version("1.11.0")
 
     handle <- lockDirectory(file.path(base.path, version))
-    expect_identical(length(handle), 2L)
+    expect_identical(length(handle), 3L)
 
     expect_true(file.exists(file.path(base.path, paste0(version, "-00LOCK"))))
     expect_true(file.exists(file.path(base.path, "central-00LOCK")))
@@ -26,3 +26,40 @@ test_that("lockDirectory works when the directory isn't yet generated", {
     unlockDirectory(handle)
 })
 
+test_that("unlockDirectory calls the directory clearer", {
+    path <- tempfile(pattern="expired_demo")
+
+    dir.create(path)
+
+    # Making one expired directory.
+    version <- package_version("1.11.0")
+    ver.dir <- file.path(path, version)
+    dir.create(ver.dir)
+    touchDirectory(ver.dir, date=Sys.Date() - 100)
+
+    # Another versioned directory.
+    version <- package_version("1.12.0")
+    ver.dir <- file.path(path, version)
+    dir.create(ver.dir)
+    touchDirectory(ver.dir)
+
+    # Locking and unlocking without calling the directory clearer. 
+    lck <- lockDirectory(ver.dir)
+    unlockDirectory(lck, clear=FALSE)
+
+    all.files <- list.files(path)
+    expect_true("1.12.0" %in% all.files)
+    expect_true("1.12.0_dir.expiry" %in% all.files)
+    expect_true("1.11.0" %in% all.files)
+    expect_true("1.11.0_dir.expiry" %in% all.files)
+
+    # And again, this time with the clearer.
+    lck <- lockDirectory(ver.dir)
+    unlockDirectory(lck)
+
+    all.files <- list.files(path)
+    expect_true("1.12.0" %in% all.files)
+    expect_true("1.12.0_dir.expiry" %in% all.files)
+    expect_false("1.11.0" %in% all.files)
+    expect_false("1.11.0_dir.expiry" %in% all.files)
+})

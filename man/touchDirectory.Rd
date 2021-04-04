@@ -4,22 +4,17 @@
 \alias{touchDirectory}
 \title{Touch a versioned directory}
 \usage{
-touchDirectory(path, clear = TRUE, date = Sys.Date(), ...)
+touchDirectory(path, date = Sys.Date())
 }
 \arguments{
 \item{path}{String containing the path to a versioned directory.
 The \code{dirname} should be the package cache while the \code{basename} should be a version number.}
 
-\item{clear}{Logical scalar indicating whether to remove expired versions.}
-
 \item{date}{A \link{Date} object containing the current date.
 Only provided for testing.}
-
-\item{...}{Further arguments to pass to \code{\link{clearDirectories}}.}
 }
 \value{
 The \code{<version>_dir.expiry} stub file within \code{path} is updated/created with the current date.
-If \code{clear=TRUE}, expired directories are removed by \code{\link{clearDirectories}}.
 A \code{NULL} is invisibly returned.
 }
 \description{
@@ -45,16 +40,21 @@ dir.create(cache.dir)
 
 # Creating the versioned subdirectory.
 version <- package_version("1.11.0")
-dir.create(file.path(cache.dir, version))
+version.dir <- file.path(cache.dir, version)
+lck <- lockDirectory(version.dir)
+dir.create(version.dir)
 
 # Setting the last access time.
-touchDirectory(file.path(cache.dir, version))
+touchDirectory(version.dir)
 list.files(cache.dir)
 readLines(file.path(cache.dir, "1.11.0_dir.expiry"))
 
+# Making sure we unlock it afterwards.
+unlockDirectory(lck)
+
 }
 \seealso{
-\code{\link{clearDirectories}}, to remove expired directories at the same time.
+\code{\link{lockDirectory}}, which should always be called before this function.
 }
 \author{
 Aaron Lun

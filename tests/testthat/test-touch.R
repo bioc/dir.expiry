@@ -13,32 +13,6 @@ test_that("touchDirectories works as expected", {
     expect_identical(as.character(as.integer(Sys.Date())), unname(contents[,"AccessDate"]))
 })
 
-test_that("touchDirectories calls the directory clearer", {
-    path <- tempfile(pattern="expired_demo")
-
-    dir.create(path)
-    version <- package_version("1.11.0")
-    ver.dir <- file.path(path, version)
-    dir.create(ver.dir)
-    touchDirectory(ver.dir, date=Sys.Date() - 100, clear=FALSE)
-
-    all.files <- list.files(path)
-    expect_true("1.11.0" %in% all.files)
-    expect_true("1.11.0_dir.expiry" %in% all.files)
-
-    # Another versioned directory.
-    version <- package_version("1.12.0")
-    ver.dir <- file.path(path, version)
-    dir.create(ver.dir)
-    touchDirectory(ver.dir)
-
-    all.files <- list.files(path)
-    expect_true("1.12.0" %in% all.files)
-    expect_true("1.12.0_dir.expiry" %in% all.files)
-    expect_false("1.11.0" %in% all.files)
-    expect_false("1.11.0_dir.expiry" %in% all.files)
-})
-
 test_that("touchDirectories skips work", {
     path <- tempfile(pattern="expired_demo")
 

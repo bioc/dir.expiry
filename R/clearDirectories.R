@@ -21,19 +21,23 @@
 #' even if their last access date was older than the specified \code{limit}.
 #' This aims to favor the retention of newer versions, which is generally a sensible outcome when the aim is to stay up-to-date.
 #' 
-#' This function will acquire an exclusive lock on each directory before attempting to delete it.
+#' This function will acquire exclusive locks on the package cache directory and on each versioned directory before attempting to delete the latter.
 #' Applications can achieve thread safety by calling \code{\link{lockDirectory}} prior to any operations on the versioned directory.
 #' This ensures that \code{clearDirectories} will not delete a directory in use by another process, especially if the latter might update the last access time.
 #'
 #' @examples
 #' # Creating the package cache.
 #' cache.dir <- tempfile(pattern="expired_demo")
-#' dir.create(cache.dir)
 #'
 #' # Creating an older versioned directory.
 #' version <- package_version("1.11.0")
-#' touchDirectory(cache.dir, version, date=Sys.Date() - 100, clear=FALSE)
-#' dir.create(file.path(cache.dir, version))
+#' version.dir <- file.path(cache.dir, version)
+#'
+#' lck <- lockDirectory(version.dir)
+#' dir.create(version.dir)
+#' touchDirectory(version.dir, date=Sys.Date() - 100)
+#' unlockDirectory(lck, clear=FALSE) # manually clear below.
+#'
 #' list.files(cache.dir)
 #'
 #' # Clearing them out.
@@ -44,10 +48,22 @@
 #' \code{\link{touchDirectory}}, which calls this function automatically when \code{clear=TRUE}.
 #' @export
 clearDirectories <- function(dir, reference=NULL, limit=NULL) {
+    if (.was_checked_today(dir, cleared.env)) {
+        return(invisible(NULL))
+    }
+
     if (is.null(limit)) {
         limit <- Sys.getenv("BIOC_DIR_EXPIRY_LIMIT", "30")
         limit <- as.integer(limit)
     } 
+
+    # Unlike lockDirectory, this is exclusive as we will be deleting the lock
+    # files; no point allowing other processes to touch them in the meantime.
+    # We put the locking here so as to ensure that the files don't disappear
+    # between the list.files() and the actual removal.
+    plock <- .plock_path(dir)
+    p <- lock(plock) 
+    on.exit(unlock(p))
 
     pattern <- paste0(expiry.suffix, "$")
     all.files <- list.files(dir, pattern=pattern)
@@ -61,25 +77,23 @@ clearDirectories <- function(dir, reference=NULL, limit=NULL) {
     current <- as.integer(Sys.Date())
     for (x in all.files) {
         version <- sub(pattern, "", x)
-        .check_other_directory(dir, version=version, expfile=x, date=current, reference=reference, limit=limit)
+        .delete_versioned_directory(dir, version=version, expfile=x, date=current, reference=reference, limit=limit)
     }
 
     invisible(NULL)
 }
 
-#' @importFrom filelock lock unlock
-.check_other_directory <- function(dir, version, expfile, date, reference, limit) {
-    # Unlike touchDirectory, this is exclusive as we will be deleting the lock
-    # files; no point allowing other processes to touch them in the meantime.
-    plock <- .plock_path(dir)
-    p <- lock(plock) 
-    on.exit(unlock(p))
+cleared.env <- new.env()
+cleared.env$status <- list()
 
+#' @importFrom filelock lock unlock
+.delete_versioned_directory <- function(dir, version, expfile, date, reference, limit) {
     # Protect against simultaneous accesses to the targeted directory,
     # assuming users called lockDirectory() before touchDirectory().
     path <- file.path(dir, version)
     vlock <- .vlock_path(path)
     V <- lock(vlock)
+
     deleted <- FALSE
     on.exit({ 
         unlock(V)

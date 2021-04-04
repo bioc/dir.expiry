@@ -30,19 +30,23 @@ In addition, directories with version numbers greater than (or equal to) \code{r
 even if their last access date was older than the specified \code{limit}.
 This aims to favor the retention of newer versions, which is generally a sensible outcome when the aim is to stay up-to-date.
 
-This function will acquire an exclusive lock on each directory before attempting to delete it.
+This function will acquire exclusive locks on the package cache directory and on each versioned directory before attempting to delete the latter.
 Applications can achieve thread safety by calling \code{\link{lockDirectory}} prior to any operations on the versioned directory.
 This ensures that \code{clearDirectories} will not delete a directory in use by another process, especially if the latter might update the last access time.
 }
 \examples{
 # Creating the package cache.
 cache.dir <- tempfile(pattern="expired_demo")
-dir.create(cache.dir)
 
 # Creating an older versioned directory.
 version <- package_version("1.11.0")
-touchDirectory(cache.dir, version, date=Sys.Date() - 100, clear=FALSE)
-dir.create(file.path(cache.dir, version))
+version.dir <- file.path(cache.dir, version)
+
+lck <- lockDirectory(version.dir)
+dir.create(version.dir)
+touchDirectory(version.dir, date=Sys.Date() - 100)
+unlockDirectory(lck, clear=FALSE) # manually clear below.
+
 list.files(cache.dir)
 
 # Clearing them out.

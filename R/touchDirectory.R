@@ -4,10 +4,8 @@
 #'
 #' @param path String containing the path to a versioned directory.
 #' The \code{dirname} should be the package cache while the \code{basename} should be a version number.
-#' @param clear Logical scalar indicating whether to remove expired versions.
 #' @param date A \link{Date} object containing the current date.
 #' Only provided for testing.
-#' @param ... Further arguments to pass to \code{\link{clearDirectories}}.
 #'
 #' @details
 #' This function should be called \emph{after} any successful access to the contents of a versioned directory,
@@ -24,7 +22,6 @@
 #' 
 #' @return 
 #' The \code{<version>_dir.expiry} stub file within \code{path} is updated/created with the current date.
-#' If \code{clear=TRUE}, expired directories are removed by \code{\link{clearDirectories}}.
 #' A \code{NULL} is invisibly returned.
 #'
 #' @author Aaron Lun
@@ -35,60 +32,67 @@
 #'
 #' # Creating the versioned subdirectory.
 #' version <- package_version("1.11.0")
-#' dir.create(file.path(cache.dir, version))
-#'
+#' version.dir <- file.path(cache.dir, version)
+#' lck <- lockDirectory(version.dir)
+#' dir.create(version.dir)
+#' 
 #' # Setting the last access time.
-#' touchDirectory(file.path(cache.dir, version))
+#' touchDirectory(version.dir)
 #' list.files(cache.dir)
 #' readLines(file.path(cache.dir, "1.11.0_dir.expiry"))
+#'
+#' # Making sure we unlock it afterwards.
+#' unlockDirectory(lck)
 #' 
 #' @seealso
-#' \code{\link{clearDirectories}}, to remove expired directories at the same time.
+#' \code{\link{lockDirectory}}, which should always be called before this function.
 #'
 #' @export
 #' @importFrom utils packageVersion
 #' @importFrom filelock lock unlock
-touchDirectory <- function(path, clear=TRUE, date=Sys.Date(), ...) {
-    if (.check_for_expiry(path)) {
-        out <- paste0(.unslash(path), expiry.suffix)
-
-        lckfile <- paste0(out, lock.suffix)
-        lckhandle <- lock(lckfile)
-        on.exit(unlock(lckhandle))
-
-        write.dcf(file=out, cbind(ExpiryVersion=as.character(packageVersion("dir.expiry")), AccessDate=as.integer(date)))
-
-        if (clear) {
-            clearDirectories(dirname(path), reference=basename(path), ...)
-        }
+touchDirectory <- function(path, date=Sys.Date()) {
+    if (.was_checked_today(path, touched.env)) {
+        return(invisible(NULL))
     }
+
+    out <- paste0(.unslash(path), expiry.suffix)
+
+    # Creating a lockfile for the actual expiry file, so that multiple
+    # processes can touch it at the same time (e.g., if those processes were
+    # otherwise read-only on the directory contents and thus held shared locks
+    # via lockDirectory).
+    lckfile <- paste0(out, lock.suffix)
+    lckhandle <- lock(lckfile)
+    on.exit(unlock(lckhandle))
+
+    write.dcf(file=out, cbind(ExpiryVersion=as.character(packageVersion("dir.expiry")), AccessDate=as.integer(date)))
 
     invisible(NULL)
 }
 
 expiry.suffix <- "_dir.expiry"
-expiry.env <- new.env()
-expiry.env$status <- list()
+touched.env <- new.env()
+touched.env$status <- list()
 
-.check_for_expiry <- function(vpath) {
-    info <- expiry.env$status[[vpath]]
+.was_checked_today <- function(vpath, env) {
+    info <- env$status[[vpath]]
 
     if (is.null(info)) {
         info <- list(last.checked=Sys.Date())
-        expiry.env$status[[vpath]] <- info
-        TRUE
+        env$status[[vpath]] <- info
+        FALSE 
     } else {
         if (Sys.Date() == info$last.checked) {
-            FALSE
+            TRUE 
         } else {
             info$last.checked <- Sys.Date()
-            expiry.env$status[[vpath]] <- info
-            TRUE
+            env$status[[vpath]] <- info
+            FALSE
         }
     }
 }
 
-.flush_cache <- function() {
-    expiry.env$status <- list()
+.flush_cache <- function(env) {
+    env$status <- list()
     invisible(NULL)
 }

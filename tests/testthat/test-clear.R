@@ -9,13 +9,13 @@ test_that("clearDirectories works as expected", {
     version <- package_version("1.11.0")
     ver.dir <- file.path(path, version)
     dir.create(ver.dir)
-    touchDirectory(ver.dir, date=Sys.Date() - 100, clear=FALSE)
+    touchDirectory(ver.dir, date=Sys.Date() - 100)
 
     # Making a more recent one without any clearing.
     version <- package_version("1.12.0")
     ver.dir <- file.path(path, version)
     dir.create(ver.dir)
-    touchDirectory(ver.dir, clear=FALSE)
+    touchDirectory(ver.dir)
 
     earlier <- c("1.11.0", "1.11.0_dir.expiry")
     later <- c("1.12.0", "1.12.0_dir.expiry")
@@ -36,7 +36,7 @@ test_that("clearDirectories responds to the environment variables", {
     version <- package_version("1.11.0")
     ver.dir <- file.path(path, version)
     dir.create(ver.dir)
-    touchDirectory(ver.dir, date=Sys.Date() - 100, clear=FALSE)
+    touchDirectory(ver.dir, date=Sys.Date() - 100)
 
     expected <- c("1.11.0", "1.11.0_dir.expiry") 
     expect_true(all(expected %in% list.files(path)))
@@ -56,7 +56,9 @@ test_that("clearDirectories responds to the environment variables", {
         Sys.setenv(BIOC_DIR_EXPIRY_LIMIT=NA)
     }
 
-    # Positive control.
+    # Positive control. Requires a flush to avoid skipping the deletion altogether,
+    # given that the same 'path' has already been checked.
+    dir.expiry:::.flush_cache(dir.expiry:::cleared.env)
     clearDirectories(path)
     expect_false(any(expected %in% list.files(path)))
 })
@@ -68,12 +70,12 @@ test_that("clearDirectories doesn't delete the reference or newer versions", {
     version <- package_version("1.11.0")
     ver.dir <- file.path(path, version)
     dir.create(ver.dir)
-    touchDirectory(ver.dir, date=Sys.Date() - 100, clear=FALSE)
+    touchDirectory(ver.dir, date=Sys.Date() - 100)
 
     version <- package_version("1.12.0")
     ver.dir <- file.path(path, version)
     dir.create(ver.dir)
-    touchDirectory(ver.dir, date=Sys.Date() - 100, clear=FALSE)
+    touchDirectory(ver.dir, date=Sys.Date() - 100)
 
     earlier <- c("1.11.0", "1.11.0_dir.expiry")
     later <- c("1.12.0", "1.12.0_dir.expiry")
@@ -84,7 +86,8 @@ test_that("clearDirectories doesn't delete the reference or newer versions", {
     clearDirectories(path, reference=package_version("1.11.0"))
     expect_true(all(expected %in% list.files(path)))
 
-    # Keeps the reference.
+    # Keeps the reference. Again, requires a flush to avoid skipping deletion.
+    dir.expiry:::.flush_cache(dir.expiry:::cleared.env)
     clearDirectories(path, reference=package_version("1.12.0"))
     expect_false(any(c(earlier, "1.11.0-00LOCK") %in% list.files(path)))
     expect_true(all(later %in% list.files(path))) # doesn't make the lock for the reference
