@@ -76,61 +76,99 @@ list.files(cache.path)
 cat(readLines(file.path(cache.path, "1.0.0_dir.expiry")), sep="\n")
 ```
 
-# Deleting old caches
-
-`touchDirectory()` will automatically delete all expired caches that it finds in the package cache directory.
-By default, this is defined as all caches that were last accessed more than 30 days ago.
-To illustrate, let's create another versioned cache and pretend it was created 100 days ago:
-
-```{r}
-old.version <- package_version("0.99.0")
-old.version.dir <- file.path(cache.path, old.version)
-dir.create(old.version.dir)
-touchDirectory(old.version.dir, date=Sys.Date() - 100, clear=FALSE)
-list.files(cache.path)
-```
-
-Running `touchDirectory()` on the more recent version will delete the files associated with `old.version`.
-However, the converse is not true; running `touchDirectory()` on the older version will never delete files associated with a newer version.
-This favors retention of caches corresponding to later versions, which is generally a reasonable outcome. 
-
-```{r}
-new.version <- package_version("1.0.1")
-new.version.dir <- file.path(cache.path, new.version)
-dir.create(new.version.dir)
-touchDirectory(new.version.dir)
-list.files(cache.path)
-```
-
-Users can tune the expiration threshold by setting the number of days in the `limit=` argument or the `BIOC_DIR_EXPIRY_LIMIT` environment variable.
-
 # Maintaining thread safety
 
-`touchDirectory()` makes extensive use of file locks (via the `r CRANpkg("filelock")` package) to avoid deleting caches that might be in use by other R processes.
-Developers are strongly advised to lock their directories of interest before calling `touchDirectory()`.
-This is done most safely by using the `lockDirectory()` function:
+`r Biocpkg("dir.expiry")` makes extensive use of file locks (via the `r CRANpkg("filelock")` package) to avoid deleting caches that might be in use by other R processes.
+Developers are strongly advised to lock their directories of interest before doing anything with them, including any calls to `touchDirectory()`.
+This should be done using the `lockDirectory()` function:
 
 ```{r}
 v <- package_version("1.0.0")
 v.dir <- file.path(cache.path, v)
+
 lock <- lockDirectory(v.dir)
 # on.exit(unlockDirectory(lock)), in a function context.
 
 # Do stuff with the versioned cache 'v.dir' here...
+dir.create(v.dir, showWarnings=FALSE)
 
 # Finally, touch the directory on successful completion.
 touchDirectory(v.dir)
 ```
 
-```{r, echo=FALSE, results="hide"}
+In real functions, `on.exit()` is the preferred approach for releasing the locks created by `lockDirectory()`.
+In this vignette, though, we will just call this function manually.
+
+```{r}
 unlockDirectory(lock) 
 ```
 
-When deleting old versions, `touchDirectory()` will attempt to acquire an exclusive lock on the corresponding directories.
-By locking it as shown above, we ensure that other R processes calling `touchDirectory()` will not inadvertently delete the cache directory while we are operating on it.
-
 For read-only applications, developers may wish to set `exclusive=FALSE` in `lockDirectory()`.
 This allows multiple processes to read from the versioned cache at the same time, only being blocked when one process needs to perform a write operation.
+
+# Deleting old caches
+
+`unlockDirectory()` will automatically delete all expired versoins that it finds in the package cache directory.
+By default, this is defined as all directories that were last touched more than 30 days ago.
+To illustrate, let's create another versioned directories and pretend it was created 100 days ago:
+
+```{r}
+cache.path <- tempfile(pattern="expired_demo")
+
+old.version <- package_version("0.99.0")
+old.version.dir <- file.path(cache.path, old.version)
+
+lck <- lockDirectory(old.version.dir)
+dir.create(old.version.dir)
+touchDirectory(old.version.dir, date=Sys.Date() - 100)
+unlockDirectory(lck, clear=FALSE)
+
+list.files(cache.path)
+```
+
+Locking and unlocking a more recent versioned directory will delete the files associated with the older version.
+This includes the versioned directory itself as well as any lock and expiry files.
+
+```{r}
+new.version <- package_version("1.0.0")
+new.version.dir <- file.path(cache.path, new.version)
+
+lck <- lockDirectory(new.version.dir)
+dir.create(new.version.dir)
+touchDirectory(new.version.dir)
+unlockDirectory(lck)
+
+list.files(cache.path)
+```
+
+However, the converse is not true; locking/unlocking the older version will never delete files associated with a newer version.
+This favors retention of caches corresponding to later versions, which is generally a reasonable outcome. 
+
+```{r}
+new.version2 <- package_version("1.0.1")
+new.version.dir2 <- file.path(cache.path, new.version2)
+
+# Newer version but earlier access.
+lck2 <- lockDirectory(new.version.dir2)
+dir.create(new.version.dir2)
+touchDirectory(new.version.dir2, date=Sys.Date() - 100) 
+unlockDirectory(lck2)
+
+# Re-accessing the older version.
+lck <- lockDirectory(new.version.dir)
+touchDirectory(new.version.dir)
+unlockDirectory(lck)
+
+list.files(cache.path)
+```
+
+
+Under the hood, `unlockDirectory()` calls `clearDirectories()` to destroy the expired versioned directories.
+Users can tune the expiration threshold by setting the number of days in the `limit=` argument or the `BIOC_DIR_EXPIRY_LIMIT` environment variable.
+
+When deleting old versions, `clearDirectories()` will attempt to acquire an exclusive lock on the corresponding directories.
+As long as other processes call `lockDirectory()` before working on them,
+we ensure that `clearDirectories()` does not inadvertently delete a versioned directory that another process is simultaneously operating on.
 
 # Session information {-}
 
