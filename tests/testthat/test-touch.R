@@ -25,11 +25,16 @@ test_that("touchDirectories skips work", {
     expect_true(file.exists(target))
 
     # Doesn't bother to regenerate the file, because we skip this process entirely.
-    unlink(target)
+    write(file=target, "BLAH")
     touchDirectory(ver.dir)
-    expect_false(file.exists(target))
+    expect_identical(readLines(target), "BLAH")
 
     # Unless we force the issue.
     touchDirectory(ver.dir, force=TRUE)
+    expect_match(readLines(target)[2], "AccessDate")
+
+    # ... or if the file is deleted.
+    unlink(target)
+    touchDirectory(ver.dir)
     expect_true(file.exists(target))
 })

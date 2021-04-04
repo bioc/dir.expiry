@@ -57,11 +57,14 @@
 #' @importFrom utils packageVersion
 #' @importFrom filelock lock unlock
 touchDirectory <- function(path, date=Sys.Date(), force=FALSE) {
-    if (.was_checked_today(path, touched.env) && !force) {
+    out <- paste0(.unslash(path), expiry.suffix)
+
+    # Skipping if we already touched it some time today. Note we have to 
+    # check for the existence of the file just in case it got deleted by
+    # clearDirectories (e.g., with limit=-Inf) in the meantime.
+    if (.was_checked_today(path, touched.env) && !force && file.exists(out)) {
         return(invisible(NULL))
     }
-
-    out <- paste0(.unslash(path), expiry.suffix)
 
     # Creating a lockfile for the actual expiry file, so that multiple
     # processes can touch it at the same time (e.g., if those processes were
