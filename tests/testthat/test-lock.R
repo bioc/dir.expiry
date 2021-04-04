@@ -63,3 +63,18 @@ test_that("unlockDirectory calls the directory clearer", {
     expect_false("1.11.0" %in% all.files)
     expect_false("1.11.0_dir.expiry" %in% all.files)
 })
+
+test_that("lockDirectory handles errors and sharedness correctly", {
+    tmp <- file.path(tempfile(), "1.0.0")
+
+    loc <- lockDirectory(tmp)
+    expect_true(file.exists(paste0(tmp, "-00LOCK")))
+    expect_error(lockDirectory(tmp, exclusive=FALSE), "exclusive")
+    expect_null(unlockDirectory(loc))
+
+    loc1 <- lockDirectory(tmp, exclusive=FALSE)
+    loc2 <- lockDirectory(tmp, exclusive=FALSE)
+    expect_error(lockDirectory(tmp, exclusive=TRUE), "shared")
+    unlockDirectory(loc1)
+    unlockDirectory(loc2)
+})

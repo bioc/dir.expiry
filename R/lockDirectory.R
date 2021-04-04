@@ -46,15 +46,24 @@
 #' list.files(cache.dir)
 #' 
 #' @export
-#' @importFrom filelock lock
+#' @importFrom filelock lock unlock
 lockDirectory <- function(path, ...) {
     dir <- dirname(path)
     dir.create(dir, showWarnings=FALSE, recursive=TRUE)
-    plock <- .plock_path(dir)
 
+    plock <- .plock_path(dir)
     second <- lock(plock, exclusive=FALSE) # define this first to protect the other lock.
+
     vlock <- .vlock_path(path)
-    list(version=lock(vlock, ...), central=second, path=path)
+    tryCatch({
+        first <- lock(vlock, ...)
+    }, error=function(e) {
+        # Release the prior lock if acquiring this one fails.
+        unlock(second)
+        stop(e)
+    })
+
+    list(version=first, central=second, path=path)
 }
 
 lock.suffix <- "-00LOCK"
