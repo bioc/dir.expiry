@@ -3,7 +3,7 @@ title: Managing expiration of versioned subdirectories
 author: 
 - name: Aaron Lun
   email: infinite.monkeys.with.keyboards@gmail.com
-date: "Revised: February 14, 2021"
+date: "Revised: September 4, 2022"
 output:
   BiocStyle::html_document:
     toc_float: true
@@ -67,7 +67,7 @@ library(dir.expiry)
 touchDirectory(version.dir)
 ```
 
-Doing so creates or updates an `*_dir.expiry-info` file containing the last access date as an integer.
+Doing so creates or updates an `*_dir.expiry` file containing the last access date as an integer.
 (This implies that the process creating the cache should not make any of its own files ending with `*_dir.expiry-info`, lest they be confused with `r Biocpkg("dir.expiry")`'s files.)
 Only directories with Bioconductor-style versions should be present in the package cache directory.
 
@@ -108,7 +108,7 @@ This allows multiple processes to read from the versioned cache at the same time
 
 # Deleting old caches
 
-`unlockDirectory()` will automatically delete all expired versoins that it finds in the package cache directory.
+`unlockDirectory()` will automatically delete all expired versions that it finds in the package cache directory.
 By default, this is defined as all directories that were last touched more than 30 days ago.
 To illustrate, let's create another versioned directories and pretend it was created 100 days ago:
 
@@ -161,7 +161,6 @@ unlockDirectory(lck)
 
 list.files(cache.path)
 ```
-
 
 Under the hood, `unlockDirectory()` calls `clearDirectories()` to destroy the expired versioned directories.
 Users can tune the expiration threshold by setting the number of days in the `limit=` argument or the `BIOC_DIR_EXPIRY_LIMIT` environment variable.
