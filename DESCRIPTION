@@ -1,6 +1,6 @@
 Package: dir.expiry
-Version: 1.13.0
-Date: 2022-09-04
+Version: 1.13.1
+Date: 2024-10-17
 Title: Managing Expiration for Cache Directories
 Description: Implements an expiration system for access to versioned directories.
     Directories that have not been accessed by a registered function within a certain time frame are deleted.
@@ -19,4 +19,5 @@ biocViews:
     Software,
     Infrastructure
 VignetteBuilder: knitr
-RoxygenNote: 7.1.1
+RoxygenNote: 7.3.2
+Encoding: UTF-8

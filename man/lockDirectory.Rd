@@ -29,23 +29,21 @@ If \code{clear=TRUE}, versioned directories that have expired are removed by \co
 It returns a \code{NULL} invisibly.
 }
 \description{
-Mark directories as locked or unlocked for thread-safe processing,
-using a standard naming scheme for the lock files.
+Lock and unlock the package and version directories for thread-safe processing.
 }
 \details{
 \code{lockDirectory} actually creates two locks:
 \itemize{
-\item The first lock is applied to the versioned directory (i.e., \code{basename(path)}) within the package cache (i.e., \code{dirname(path)}).
+\item The first \dQuote{V} lock is applied to the versioned directory (i.e., \code{basename(path)}) within the package cache (i.e., \code{dirname(path)}).
 This provides thread-safe read/write on its contents, protecting against other processes that want to write to the same versioned directory.
-Concurrent read operations are also permitted by setting \code{exclusive=FALSE} in \code{...} to define a shared lock..
-\item The second lock is applied to the package cache and is always a shared lock, regardless of the contents of \code{...}.
-This provides thread-safe access to the lock file used in the first lock,
-protecting it from deletion when the relevant directory expires in \code{\link{clearDirectories}}.
+If the caller is only reading from \code{path}, they can set \code{exclusive=FALSE} in \code{...} to define a shared lock for concurrent reads across multiple processes.
+\item The second \dQuote{P} lock is applied to the package cache and is always a shared lock, regardless of the contents of \code{...}.
+This provides thread-safe access to the lock file used by the V lock, protecting it from deletion when the relevant directory expires in \code{\link{clearDirectories}}.
 }
 If \code{dirname(path)} does not exist, it will be created by \code{lockDirectory}.
 
 \code{\link{clearDirectories}} is called in \code{unlockDirectory} as the former needs to hold an exclusive lock on the package cache.
-Thus, the clearing can only be performed after the shared lock created by \code{lockDirectory} is released.
+Thus, the clearing can only be performed after the P lock created by \code{lockDirectory} is released.
 }
 \examples{
 # Creating the relevant directories.

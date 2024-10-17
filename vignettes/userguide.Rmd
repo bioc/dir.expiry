@@ -37,6 +37,7 @@ However, it requires some housekeeping to remove stale caches and avoid an large
 
 One might think of using POSIX access time but this is not a reliable indicator of whether a cache is truly being used by the package.
 For example, external processes like virus scans, `find -exec grep` and so on can update the last access time without actually using the cache's contents.
+Some filesystem administrators may even turn off access time tracking for performance.
 
 # Setting the access time
 
